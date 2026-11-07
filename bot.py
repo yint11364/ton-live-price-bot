@@ -60,7 +60,7 @@ async def update_board(app: Application) -> None:
         await app.bot.edit_message_text(
             chat_id=CHAT_ID,
             message_id=board_message_id,
-            text="\\n".join(lines),
+            text="\n".join(lines),
         )
     except Exception as exc:
         # Telegram reports an error when the text has not changed; ignore that case.
