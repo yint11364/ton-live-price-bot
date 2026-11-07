@@ -21,6 +21,7 @@ DEX_TOKENS = "https://api.dexscreener.com/latest/dex/tokens/"
 # token address -> display information
 tracked: dict[str, dict] = {}
 last_prices: dict[str, str] = {}
+board_message_id: int | None = None
 http: httpx.AsyncClient
 
 
@@ -36,6 +37,35 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
         "/coins — list discovered tokens\n"
         "New pools are checked about once per minute; tracked prices are requested every 5 seconds."
     )
+
+
+async def live(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+    global board_message_id
+    if not allowed(update):
+        return
+    message = await update.message.reply_text("TON live price board is starting…")
+    board_message_id = message.message_id
+
+
+async def update_board(app: Application) -> None:
+    if board_message_id is None:
+        return
+    lines = ["TON LIVE PRICES (provider data; may be delayed)"]
+    for address, info in list(tracked.items())[:20]:
+        price = last_prices.get(address, "not available")
+        lines.append(f"• {info['name']}: ${price}")
+    if len(lines) == 1:
+        lines.append("No supported TON pools discovered yet.")
+    try:
+        await app.bot.edit_message_text(
+            chat_id=CHAT_ID,
+            message_id=board_message_id,
+            text="\\n".join(lines),
+        )
+    except Exception as exc:
+        # Telegram reports an error when the text has not changed; ignore that case.
+        if "Message is not modified" not in str(exc):
+            log.warning("Could not update live board: %s", exc)
 
 
 async def coins(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
@@ -112,6 +142,7 @@ async def discovery_loop(app: Application) -> None:
 async def price_loop(app: Application) -> None:
     while True:
         await refresh_prices(app)
+        await update_board(app)
         await asyncio.sleep(5)
 
 
@@ -137,6 +168,7 @@ def main() -> None:
     )
     app.add_handler(CommandHandler("start", start))
     app.add_handler(CommandHandler("coins", coins))
+    app.add_handler(CommandHandler("live", live))
     app.run_polling(allowed_updates=Update.ALL_TYPES)
 
 
