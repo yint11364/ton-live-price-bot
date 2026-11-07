@@ -1,0 +1,13 @@
+{
+  "name": "ton-live-price-bot",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "description": "Telegram bot for monitoring newly listed TON DEX pools and refreshing tracked prices.",
+  "scripts": {
+    "start": "node src/index.js"
+  },
+  "engines": {
+    "node": ">=20"
+  }
+}
